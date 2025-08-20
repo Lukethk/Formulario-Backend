@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult, param } = require('express-validator');
 const { query } = require('../config/database');
+const { verifyToken, requireRole } = require('../config/auth');
 const router = express.Router();
 
 const handleValidationErrors = (req, res, next) => {
@@ -33,7 +34,7 @@ const validateFormulario = [
   body('rescate_animal').optional().isObject()
 ];
 
-router.post('/', validateFormulario, handleValidationErrors, async (req, res) => {
+router.post('/', verifyToken, validateFormulario, handleValidationErrors, async (req, res) => {
   try {
     const {
       brigada_id,
@@ -61,21 +62,21 @@ router.post('/', validateFormulario, handleValidationErrors, async (req, res) =>
 
     const result = await query(`
       INSERT INTO formularios_necesidades (
-        brigada_id, epp_ropa, epp_botas, epp_general, epp_guantes,
+        brigada_id, usuario_id, epp_ropa, epp_botas, epp_general, epp_guantes,
         herramientas, logistica_vehiculos, alimentacion, equipo_campo,
         limpieza_personal, limpieza_general, medicamentos, rescate_animal
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `, [
-      brigada_id, epp_ropa, epp_botas, epp_general, epp_guantes,
+      brigada_id, req.user.id, epp_ropa, epp_botas, epp_general, epp_guantes,
       herramientas, logistica_vehiculos, alimentacion, equipo_campo,
       limpieza_personal, limpieza_general, medicamentos, rescate_animal
     ]);
 
     await query(`
-      INSERT INTO historial_estados (formulario_id, estado_anterior, estado_nuevo, comentario, usuario)
-      VALUES ($1, NULL, $2, 'Formulario creado', 'sistema')
-    `, [result.rows[0].id, 'pendiente']);
+      INSERT INTO historial_estados (formulario_id, estado_anterior, estado_nuevo, comentario, usuario_id)
+      VALUES ($1, NULL, $2, 'Formulario creado', $3)
+    `, [result.rows[0].id, 'pendiente', req.user.id]);
 
     res.status(201).json({
       success: true,
@@ -91,7 +92,7 @@ router.post('/', validateFormulario, handleValidationErrors, async (req, res) =>
   }
 });
 
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   try {
     const {
       brigada_id,
@@ -108,7 +109,11 @@ router.get('/', async (req, res) => {
     let queryParams = [];
     let paramIndex = 1;
 
-    if (brigada_id) {
+    // Filtrar por brigada del usuario (si no es admin)
+    if (req.user.rol !== 'admin') {
+      whereConditions.push(`fn.brigada_id = $${paramIndex++}`);
+      queryParams.push(req.user.brigada_id);
+    } else if (brigada_id) {
       whereConditions.push(`fn.brigada_id = $${paramIndex++}`);
       queryParams.push(brigada_id);
     }
@@ -569,6 +574,86 @@ router.post('/crear-completo', [
       success: false,
       message: 'Error interno del servidor',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// OBTENER FORMULARIOS DEL USUARIO AUTENTICADO
+router.get('/mis-formularios', verifyToken, async (req, res) => {
+  try {
+    const {
+      estado,
+      fecha_desde,
+      fecha_hasta,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    let whereConditions = [`fn.usuario_id = $1`];
+    let queryParams = [req.user.id];
+    let paramIndex = 2;
+
+    if (estado) {
+      whereConditions.push(`fn.estado = $${paramIndex++}`);
+      queryParams.push(estado);
+    }
+
+    if (fecha_desde) {
+      whereConditions.push(`fn.fecha_creacion >= $${paramIndex++}`);
+      queryParams.push(fecha_desde);
+    }
+
+    if (fecha_hasta) {
+      whereConditions.push(`fn.fecha_creacion <= $${paramIndex++}`);
+      queryParams.push(fecha_hasta);
+    }
+
+    const offset = (page - 1) * limit;
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    const result = await query(`
+      SELECT 
+        fn.*,
+        ef.nombre as estado_nombre,
+        ef.color as estado_color,
+        b.nombre as brigada_nombre
+      FROM formularios_necesidades fn
+      LEFT JOIN estados_formulario ef ON fn.estado = ef.id
+      LEFT JOIN brigadas b ON fn.brigada_id = b.id
+      ${whereClause}
+      ORDER BY fn.fecha_creacion DESC
+      LIMIT $${paramIndex++} OFFSET $${paramIndex++}
+    `, [...queryParams, limit, offset]);
+
+    // Contar total de formularios del usuario
+    const countResult = await query(`
+      SELECT COUNT(*) as total
+      FROM formularios_necesidades fn
+      ${whereClause}
+    `, queryParams);
+
+    const total = parseInt(countResult.rows[0].total);
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      success: true,
+      data: {
+        formularios: result.rows,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          totalPages
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al obtener formularios del usuario:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
     });
   }
 });

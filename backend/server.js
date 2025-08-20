@@ -14,6 +14,7 @@ const equiposBrigadaRoutes = require('./routes/equiposBrigada');
 const formulariosNecesidadesRoutes = require('./routes/formularios-necesidades');
 const estadosFormularioRoutes = require('./routes/estados-formulario');
 const reportesRoutes = require('./routes/reportes');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,7 +23,8 @@ app.use(helmet());
 
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://localhost:4200'] 
+    ? ['https://localhost:4200']
+     
     : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -39,6 +41,7 @@ app.get('/', (req, res) => {
     message: '🚒 API de Formulario de Bomberos funcionando correctamente',
     version: '1.0.0',
           endpoints: {
+        auth: '/api/auth',
         brigadas: '/api/brigadas',
         equipos: '/api/equipos',
         categorias: '/api/categorias',
@@ -51,6 +54,7 @@ app.get('/', (req, res) => {
   });
 });
 
+app.use('/api/auth', authRoutes);
 app.use('/api/brigadas', brigadasRoutes);
 app.use('/api/equipos', equiposRoutes);
 app.use('/api/categorias', categoriasRoutes);

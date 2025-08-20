@@ -1,0 +1,421 @@
+================================================================================
+                    ENDPOINTS COMPLETOS PARA FRONTEND - SISTEMA DE BOMBEROS
+================================================================================
+
+BASE URL: http://localhost:3000/api
+
+================================================================================
+1. ENDPOINTS DE AUTENTICACIÓN
+================================================================================
+
+1.1 REGISTRO DE USUARIO
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "nombre": "Juan Pérez",
+  "email": "juan.perez@bomberos.com",
+  "password": "contraseña123",
+  "rol": "bombero",
+  "brigada_id": "uuid-de-la-brigada",
+  "numero_legajo": "BP001",
+  "telefono": "+54 9 11 1234-5678",
+  "activo": true
+}
+
+1.2 LOGIN DE USUARIO
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "juan.perez@bomberos.com",
+  "password": "contraseña123"
+}
+
+1.3 VERIFICAR TOKEN
+GET /api/auth/verify
+Authorization: Bearer <token>
+
+1.4 CAMBIAR CONTRASEÑA
+POST /api/auth/change-password
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "currentPassword": "contraseña_actual",
+  "newPassword": "nueva_contraseña123"
+}
+
+================================================================================
+2. ENDPOINTS DE FORMULARIOS
+================================================================================
+
+2.1 CREAR FORMULARIO
+POST /api/formularios-necesidades
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "brigada_id": "uuid-de-la-brigada",
+  "epp_ropa": {
+    "casco": 5,
+    "chaqueta": 10
+  },
+  "epp_botas": {
+    "talla_42": 8,
+    "talla_43": 12
+  },
+  "herramientas": {
+    "hacha": 3,
+    "manguera": 15
+  }
+}
+
+2.2 OBTENER FORMULARIOS DEL USUARIO
+GET /api/formularios-necesidades/mis-formularios?estado=pendiente&page=1&limit=10
+Authorization: Bearer <token>
+
+2.3 OBTENER TODOS LOS FORMULARIOS
+GET /api/formularios-necesidades?brigada_id=uuid&estado=aprobado&page=1&limit=10
+Authorization: Bearer <token>
+
+2.4 OBTENER FORMULARIO POR ID
+GET /api/formularios-necesidades/:id
+Authorization: Bearer <token>
+
+2.5 ACTUALIZAR FORMULARIO
+PUT /api/formularios-necesidades/:id
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "epp_ropa": {
+    "casco": 8,
+    "chaqueta": 15
+  }
+}
+
+2.6 CAMBIAR ESTADO
+PATCH /api/formularios-necesidades/:id/estado
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "estado": "aprobado",
+  "comentario": "Formulario aprobado por comandante"
+}
+
+2.7 TRANSICIÓN DE ESTADO
+POST /api/formularios-necesidades/:id/transicion
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "estado_destino": "en_proceso",
+  "comentario": "Iniciando proceso de compra"
+}
+
+================================================================================
+3. ENDPOINTS DE BRIGADAS
+================================================================================
+
+3.1 OBTENER TODAS LAS BRIGADAS
+GET /api/brigadas
+
+3.2 OBTENER BRIGADA POR ID
+GET /api/brigadas/:id
+
+3.3 CREAR BRIGADA
+POST /api/brigadas
+Content-Type: application/json
+
+{
+  "nombre": "Brigada Central",
+  "cantidad_bomberos_activos": 25,
+  "contacto_comandante": "Comandante García",
+  "encargado_logistica": "Sargento López",
+  "contacto_logistica": "+54 9 11 1234-5678",
+  "numero_emergencia_publico": "100",
+  "region": "Centro"
+}
+
+================================================================================
+4. ENDPOINTS DE EQUIPOS
+================================================================================
+
+4.1 OBTENER CATEGORÍAS
+GET /api/categorias
+
+4.2 OBTENER EQUIPOS POR CATEGORÍA
+GET /api/equipos?categoria_id=1
+
+4.3 OBTENER TALLAS
+GET /api/tallas
+
+================================================================================
+5. ENDPOINTS DE REPORTES
+================================================================================
+
+5.1 OBTENER REPORTES
+GET /api/reportes
+Authorization: Bearer <token>
+
+================================================================================
+6. IMPLEMENTACIÓN EN FRONTEND
+================================================================================
+
+6.1 CONFIGURACIÓN BASE
+const API_BASE_URL = 'http://localhost:3000/api';
+const TOKEN_KEY = 'bomberos_token';
+const USER_KEY = 'bomberos_user';
+
+const getToken = () => localStorage.getItem(TOKEN_KEY);
+
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${getToken()}`
+});
+
+6.2 SERVICIO DE AUTENTICACIÓN
+class AuthService {
+  static async login(email, password) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        localStorage.setItem(TOKEN_KEY, data.data.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(data.data.user));
+        return data.data;
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    window.location.href = '/login';
+  }
+
+  static isAuthenticated() {
+    return !!getToken();
+  }
+
+  static getCurrentUser() {
+    const user = localStorage.getItem(USER_KEY);
+    return user ? JSON.parse(user) : null;
+  }
+}
+
+6.3 SERVICIO DE FORMULARIOS
+class FormulariosService {
+  static async getMisFormularios(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await fetch(
+        `${API_BASE_URL}/formularios-necesidades/mis-formularios?${queryString}`,
+        { headers: getAuthHeaders() }
+      );
+      
+      const data = await response.json();
+      return data.success ? data.data : null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async crearFormulario(formData) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/formularios-necesidades`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(formData)
+      });
+      
+      const data = await response.json();
+      return data.success ? data.data : null;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async getFormularioById(id) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/formularios-necesidades/${id}`,
+        { headers: getAuthHeaders() }
+      );
+      
+      const data = await response.json();
+      return data.success ? data.data : null;
+    } catch (error) {
+      throw error;
+    }
+  }
+}
+
+6.4 INTERCEPTOR PARA MANEJAR ERRORES
+const handleApiResponse = async (response) => {
+  if (response.status === 401) {
+    AuthService.logout();
+    return null;
+  }
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || 'Error en la petición');
+  }
+  
+  return response.json();
+};
+
+const apiCall = async (url, options = {}) => {
+  try {
+    const response = await fetch(url, options);
+    return await handleApiResponse(response);
+  } catch (error) {
+    console.error('Error en API call:', error);
+    throw error;
+  }
+};
+
+6.5 EJEMPLO DE COMPONENTE DE LOGIN
+const LoginComponent = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const result = await AuthService.login(email, password);
+      window.location.href = '/dashboard';
+    } catch (error) {
+      alert('Error en login: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleLogin}>
+      <input
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="Email"
+        required
+      />
+      <input
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="Contraseña"
+        required
+      />
+      <button type="submit" disabled={loading}>
+        {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+      </button>
+    </form>
+  );
+};
+
+6.6 EJEMPLO DE COMPONENTE DE LISTA
+const FormulariosListComponent = () => {
+  const [formularios, setFormularios] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadFormularios = async () => {
+      try {
+        const data = await FormulariosService.getMisFormularios();
+        setFormularios(data.formularios);
+      } catch (error) {
+        console.error('Error cargando formularios:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFormularios();
+  }, []);
+
+  if (loading) return <div>Cargando formularios...</div>;
+
+  return (
+    <div>
+      {formularios.map(formulario => (
+        <div key={formulario.id}>
+          <h3>Formulario #{formulario.id}</h3>
+          <p>Estado: {formulario.estado_nombre}</p>
+          <p>Fecha: {new Date(formulario.fecha_creacion).toLocaleDateString()}</p>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+================================================================================
+7. CREDENCIALES POR DEFECTO
+================================================================================
+
+Email: admin@bomberos.com
+Contraseña: admin123
+Rol: admin
+
+================================================================================
+8. CÓDIGOS DE ESTADO HTTP
+================================================================================
+
+200 - OK (Operación exitosa)
+201 - Created (Recurso creado)
+400 - Bad Request (Datos inválidos)
+401 - Unauthorized (No autenticado)
+403 - Forbidden (Sin permisos)
+404 - Not Found (Recurso no encontrado)
+500 - Internal Server Error (Error del servidor)
+
+================================================================================
+9. CONSIDERACIONES IMPORTANTES
+================================================================================
+
+1. Manejo de Errores: Siempre implementa manejo de errores para tokens expirados
+2. Loading States: Muestra estados de carga para mejor UX
+3. Validación: Valida datos antes de enviar al servidor
+4. Seguridad: Nunca almacenes información sensible en localStorage
+5. Refresh Token: Considera implementar refresh tokens para sesiones largas
+6. CORS: Asegúrate de que el backend permita peticiones desde tu frontend
+7. HTTPS: En producción, usa siempre HTTPS
+
+================================================================================
+10. ESTRUCTURA DE RESPUESTAS
+================================================================================
+
+Respuesta Exitosa:
+{
+  "success": true,
+  "message": "Operación exitosa",
+  "data": { ... }
+}
+
+Respuesta de Error:
+{
+  "success": false,
+  "message": "Descripción del error",
+  "errors": [ ... ]
+}
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
