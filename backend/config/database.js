@@ -7,7 +7,7 @@ const dbConfig = {
   database: process.env.DB_DATABASE || 'formulario',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || '9030',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : true,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
