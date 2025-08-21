@@ -23,8 +23,7 @@ app.use(helmet());
 
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://localhost:4200']
-     
+    ? ['https://localhost:4200', 'https://formulariofrontend.vercel.app']
     : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
