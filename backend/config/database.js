@@ -1,57 +1,46 @@
 const { Pool } = require('pg');
-require('dotenv').config();
 
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_DATABASE || 'formulario',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '9030',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : true,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-};
-
-const pool = new Pool(dbConfig);
+let pool;
 
 async function connectDB() {
+  if (pool) return pool;
+
+  console.log('🚦 Intentando conectar a Supabase PostgreSQL...');
+  
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL no está definida');
+  }
+
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }, // requerido para Supabase desde Render/local
+    max: 10, // conexiones en el pool
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
+  });
+
+  // Ping para verificar conexión
   try {
-    const client = await pool.connect();
-    console.log('✅ Conexión a PostgreSQL establecida correctamente');
-    client.release();
-    return pool;
+    await pool.query('SELECT 1');
+    console.log('✅ Conectado a Supabase PostgreSQL');
   } catch (error) {
-    console.error('❌ Error al conectar a la base de datos:', error.message);
+    console.error('❌ Error al hacer ping a la base de datos:', error.message);
     throw error;
   }
+
+  return pool;
 }
 
 async function closeDB() {
-  try {
+  if (pool) {
     await pool.end();
-    console.log('🔌 Conexión a la base de datos cerrada');
-  } catch (error) {
-    console.error('❌ Error al cerrar la conexión:', error.message);
+    console.log('🔌 Pool de DB cerrado');
   }
 }
 
 async function query(text, params) {
-  const start = Date.now();
-  try {
-    const res = await pool.query(text, params);
-    const duration = Date.now() - start;
-    console.log('📊 Consulta ejecutada en', duration, 'ms');
-    return res;
-  } catch (error) {
-    console.error('❌ Error en la consulta:', error.message);
-    throw error;
-  }
+  if (!pool) await connectDB();
+  return pool.query(text, params);
 }
 
-module.exports = {
-  connectDB,
-  closeDB,
-  query,
-  pool
-};
+module.exports = { connectDB, closeDB, query };

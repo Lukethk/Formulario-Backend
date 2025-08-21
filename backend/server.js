@@ -88,6 +88,29 @@ app.get('/test-cors', (req, res) => {
 
 app.options('/test-cors', cors());
 
+// Ruta de salud para probar la base de datos
+const { query } = require('./config/database');
+
+app.get('/health/db', async (req, res) => {
+  try {
+    const result = await query('SELECT NOW() AS now');
+    res.json({ 
+      ok: true, 
+      now: result.rows[0].now,
+      message: '✅ Base de datos funcionando correctamente',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ health/db error:', error);
+    res.status(500).json({ 
+      ok: false, 
+      error: error.message,
+      message: '❌ Error en la base de datos',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/brigadas', brigadasRoutes);
 app.use('/api/equipos', equiposRoutes);

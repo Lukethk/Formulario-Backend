@@ -1,0 +1,33 @@
+# =====================================================
+# CONFIGURACIÓN CON DATABASE_URL PARA SUPABASE
+# =====================================================
+
+# Archivo .env para desarrollo local
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=postgresql://postgres.gopaihcwqudyzftdjpmx:9030@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+
+# JWT Secret
+JWT_SECRET=bomberos_formulario_2024_supabase_secreto_super_seguro_cambiar_en_produccion
+JWT_EXPIRES_IN=7d
+
+# CORS
+CORS_ORIGIN=https://formulariofrontend.vercel.app
+
+# =====================================================
+# CONFIGURACIÓN EN RENDER:
+# =====================================================
+
+# Ve a tu servicio en Render Dashboard
+# Settings → Environment → Add Environment Variable
+
+# Key: DATABASE_URL
+# Value: postgresql://postgres.gopaihcwqudyzftdjpmx:9030@aws-1-us-east-2.pooler.supabase.com:5432/postgres
+
+# =====================================================
+# INSTRUCCIONES:
+# =====================================================
+# 1. Copiar este archivo como .env en la carpeta backend/
+# 2. Cambiar JWT_SECRET por uno más seguro
+# 3. En Render, agregar solo la variable DATABASE_URL
+# 4. Nunca subir el archivo .env al repositorio

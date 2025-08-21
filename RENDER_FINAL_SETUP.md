@@ -10,15 +10,13 @@
 ```env
 NODE_ENV=production
 PORT=10000
-DB_HOST=aws-1-us-east-2.pooler.supabase.com
-DB_PORT=5432
-DB_DATABASE=postgres
-DB_USER=postgres.gopaihcwqudyzftdjpmx
-DB_PASSWORD=9030
+DATABASE_URL=postgresql://postgres.gopaihcwqudyzftdjpmx:9030@aws-1-us-east-2.pooler.supabase.com:5432/postgres
 JWT_SECRET=bomberos_formulario_2024_supabase_secreto_super_seguro_cambiar_en_produccion
 JWT_EXPIRES_IN=7d
 CORS_ORIGIN=https://formulariofrontend.vercel.app
 ```
+
+**⚠️ IMPORTANTE: Solo necesitas configurar DATABASE_URL en Render, no las variables separadas de DB_HOST, DB_USER, etc.**
 
 ### **3. Configuración del Servicio:**
 - **Name**: `formulario-bombero-api`
