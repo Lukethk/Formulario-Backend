@@ -21,14 +21,47 @@ const PORT = process.env.PORT || 3000;
 
 app.use(helmet());
 
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://localhost:4200', 'https://formulariofrontend.vercel.app']
-    : true,
+// Configuración de CORS mejorada
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como aplicaciones móviles)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'https://formulariofrontend.vercel.app',
+      'https://localhost:4200',
+      'http://localhost:4200'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('🚫 Origen bloqueado por CORS:', origin);
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
+
+// Middleware adicional para headers CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://formulariofrontend.vercel.app');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Manejar preflight requests
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 app.use(morgan('combined'));
 
