@@ -1,0 +1,31 @@
+# =====================================================
+# ARCHIVO .env PARA SUPABASE - COPIAR COMO .env
+# =====================================================
+
+# Configuración de Supabase
+DB_HOST=aws-1-us-east-2.pooler.supabase.com
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USER=postgres.gopaihcwqudyzftdjpmx
+DB_PASSWORD=9030
+
+# Configuración del Servidor
+PORT=3000
+NODE_ENV=production
+
+# JWT Secret (generar uno nuevo y seguro)
+JWT_SECRET=bomberos_formulario_2024_supabase_secreto_super_seguro_cambiar_en_produccion
+
+# Tiempo de expiración de tokens JWT
+JWT_EXPIRES_IN=7d
+
+# CORS
+CORS_ORIGIN=https://formulariofrontend.vercel.app
+
+# =====================================================
+# INSTRUCCIONES:
+# =====================================================
+# 1. Copiar este archivo como .env en la carpeta backend/
+# 2. Cambiar JWT_SECRET por uno más seguro
+# 3. Nunca subir el archivo .env al repositorio
+# 4. Ejecutar: npm start para probar la conexión
