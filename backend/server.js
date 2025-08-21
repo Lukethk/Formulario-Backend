@@ -21,42 +21,30 @@ const PORT = process.env.PORT || 3000;
 
 app.use(helmet());
 
-// Configuración de CORS mejorada
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Permitir requests sin origin (como aplicaciones móviles)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      'https://formulariofrontend.vercel.app',
-      'https://localhost:4200',
-      'http://localhost:4200'
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('🚫 Origen bloqueado por CORS:', origin);
-      callback(new Error('No permitido por CORS'));
-    }
-  },
+// Configuración de CORS simplificada y robusta
+app.use(cors({
+  origin: 'https://formulariofrontend.vercel.app',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept'],
-  optionsSuccessStatus: 200
-};
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept']
+}));
 
-app.use(cors(corsOptions));
+// Middleware para manejar preflight requests
+app.options('*', cors());
 
-// Middleware adicional para headers CORS
+// Middleware adicional para headers CORS (backup)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'https://formulariofrontend.vercel.app');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept');
   res.header('Access-Control-Allow-Credentials', 'true');
   
+  // Log para debugging
+  console.log(`🌐 Request: ${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+  
   // Manejar preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('✅ Preflight request OPTIONS manejado');
     res.sendStatus(200);
   } else {
     next();
@@ -72,19 +60,33 @@ app.get('/', (req, res) => {
   res.json({
     message: '🚒 API de Formulario de Bomberos funcionando correctamente',
     version: '1.0.0',
-          endpoints: {
-        auth: '/api/auth',
-        brigadas: '/api/brigadas',
-        equipos: '/api/equipos',
-        categorias: '/api/categorias',
-        tallas: '/api/tallas',
-        equiposBrigada: '/api/equipos-brigada',
-        formulariosNecesidades: '/api/formularios-necesidades',
-        estadosFormulario: '/api/estados-formulario',
-        reportes: '/api/reportes'
-      }
+    cors: '✅ CORS configurado para https://formulariofrontend.vercel.app',
+    endpoints: {
+      auth: '/api/auth',
+      brigadas: '/api/brigadas',
+      equipos: '/api/equipos',
+      categorias: '/api/categorias',
+      tallas: '/api/tallas',
+      equiposBrigada: '/api/equipos-brigada',
+      formulariosNecesidades: '/api/formularios-necesidades',
+      estadosFormulario: '/api/estados-formulario',
+      reportes: '/api/reportes'
+    }
   });
 });
+
+// Ruta de prueba para CORS
+app.get('/test-cors', (req, res) => {
+  res.json({
+    message: '🧪 Test CORS exitoso',
+    timestamp: new Date().toISOString(),
+    origin: req.headers.origin,
+    method: req.method,
+    cors: '✅ Funcionando correctamente'
+  });
+});
+
+app.options('/test-cors', cors());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/brigadas', brigadasRoutes);
